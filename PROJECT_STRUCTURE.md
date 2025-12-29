@@ -8,7 +8,8 @@ The Thrive Cash FIFO Matching project has been organized into a clean directory 
 thrive-cash-fifo-matching/
 ├── src/                                  # Source code
 │   ├── __init__.py                       # Package initialization
-│   ├── thrive_cash_processing_dag.py     # Main Airflow DAG (834 lines)
+│   ├── thrive_cash_processing_dag.py     # Main Airflow DAG
+│   ├── fifo_matching.py                  # Core FIFO matching logic
 │   └── sample_queries.sql                # SQL queries for analytics (12 queries)
 │
 ├── test/                                 # Test suite
