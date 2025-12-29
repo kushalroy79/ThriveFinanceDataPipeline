@@ -16,7 +16,7 @@ import pandas as pd
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from test.test_fifo_matching import perform_fifo_matching_logic
+from src.fifo_matching import perform_fifo_matching_logic
 
 
 def print_dataframe(df, title):
