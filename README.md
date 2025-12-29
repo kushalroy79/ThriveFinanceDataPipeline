@@ -1,7 +1,7 @@
 # Thrive Cash FIFO Matching - Technical Documentation
 
 **Author**: Kushal Sinha Roy
-**Date**: December 2024  
+**Date**: December 2025  
 **Version**: 1.0.0
 
 ## Overview and Business Problem
