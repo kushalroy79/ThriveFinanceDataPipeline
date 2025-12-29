@@ -55,13 +55,16 @@ def test_simple_one_to_one_matching():
     # Assertions
     assert len(result) == 2, "Should have 2 rows (1 earned, 1 spent)"
     
+    # Spent should have NULL REDEEMID (always NULL for spent/expired)
     spent_row = result[result['TCTYPE'] == 'spent'].iloc[0]
-    assert spent_row['REDEEMID'] == 'E001', "Spent should point to earned E001"
+    assert pd.isna(spent_row['REDEEMID']), "Spent should have NULL REDEEMID"
     
+    # Earned should point to spent S001
     earned_row = result[result['TCTYPE'] == 'earned'].iloc[0]
     assert earned_row['REDEEMID'] == 'S001', "Earned should point to spent S001"
     
     print("✓ Test 1 passed: Simple one-to-one matching")
+
 
 
 # Test Case 2: 1:1 Matching (No Partial Redemption)
@@ -90,14 +93,17 @@ def test_one_to_one_matching():
     # Assertions - 1:1 matching means no splitting
     assert len(result) == 2, "Should have 2 rows (1 earned, 1 spent)"
     
+    # Spent should have NULL REDEEMID (always NULL for spent/expired)
     spent_row = result[result['TCTYPE'] == 'spent'].iloc[0]
-    assert spent_row['REDEEMID'] == 'E001', "Spent should point to earned E001"
+    assert pd.isna(spent_row['REDEEMID']), "Spent should have NULL REDEEMID"
     
+    # Earned should point to spent S001
     earned_row = result[result['TCTYPE'] == 'earned'].iloc[0]
     assert earned_row['REDEEMID'] == 'S001', "Earned should point to spent S001"
     assert earned_row['AMOUNT'] == 100.0, "Earned amount should remain $100 (no splitting)"
     
     print("✓ Test 2 passed: 1:1 matching (no partial redemption)")
+
 
 
 # Test Case 3: Multiple Earned, One Spent (FIFO Order - 1:1 Matching)
@@ -126,10 +132,11 @@ def test_fifo_order_multiple_earned():
     # Assertions - 1:1 matching
     assert len(result) == 4, "Should have 4 rows (3 earned, 1 spent)"
     
+    # Spent should have NULL REDEEMID (always NULL for spent/expired)
     spent_row = result[result['TCTYPE'] == 'spent'].iloc[0]
-    assert spent_row['REDEEMID'] == 'E001', "Spent should match oldest earned E001 (FIFO)"
+    assert pd.isna(spent_row['REDEEMID']), "Spent should have NULL REDEEMID"
     
-    # E001 should be matched to S001
+    # E001 should be matched to S001 (oldest earned by FIFO)
     e001_row = result[result['TRANS_ID'] == 'E001'].iloc[0]
     assert e001_row['REDEEMID'] == 'S001', "E001 matched to S001"
     assert e001_row['AMOUNT'] == 50.0, "E001 amount unchanged (no splitting)"
@@ -142,6 +149,7 @@ def test_fifo_order_multiple_earned():
     assert pd.isna(e003_row['REDEEMID']), "E003 should be unmatched"
     
     print("✓ Test 3 passed: FIFO order with multiple earned (1:1 matching)")
+
 
 
 # Test Case 4: One Earned, Multiple Spent (1:1 Matching)
@@ -170,23 +178,23 @@ def test_one_earned_multiple_spent():
     # Assertions - 1:1 matching means only first spent matches
     assert len(result) == 4, "Should have 4 rows (1 earned, 3 spent)"
     
-    # Only S001 should match E001 (first spent in chronological order)
+    # All spent should have NULL REDEEMID (always NULL for spent/expired)
     s001_row = result[result['TRANS_ID'] == 'S001'].iloc[0]
-    assert s001_row['REDEEMID'] == 'E001', "S001 should match E001"
+    assert pd.isna(s001_row['REDEEMID']), "S001 should have NULL REDEEMID"
     
-    # S002 and S003 should have NULL REDEEMID (no more earned available)
     s002_row = result[result['TRANS_ID'] == 'S002'].iloc[0]
     assert pd.isna(s002_row['REDEEMID']), "S002 should have NULL REDEEMID"
     
     s003_row = result[result['TRANS_ID'] == 'S003'].iloc[0]
     assert pd.isna(s003_row['REDEEMID']), "S003 should have NULL REDEEMID"
     
-    # E001 should point to S001
+    # E001 should point to S001 (first spent in chronological order)
     e001_row = result[result['TRANS_ID'] == 'E001'].iloc[0]
     assert e001_row['REDEEMID'] == 'S001', "E001 should point to S001"
     assert e001_row['AMOUNT'] == 100.0, "E001 amount unchanged (no splitting)"
     
     print("✓ Test 4 passed: One earned, multiple spent (1:1 matching)")
+
 
 
 # Test Case 5: Multiple Customers
@@ -212,19 +220,27 @@ def test_multiple_customers():
     
     result = perform_fifo_matching_logic(earned, spent, expired)
     
-    # Assertions for C001
+    # All spent should have NULL REDEEMID (always NULL for spent/expired)
     c001_spent = result[(result['CUSTOMERID'] == 'C001') & (result['TRANS_ID'] == 'S001')].iloc[0]
-    assert c001_spent['REDEEMID'] == 'E001', "C001 spent should match C001 earned"
+    assert pd.isna(c001_spent['REDEEMID']), "C001 spent should have NULL REDEEMID"
     
-    # Assertions for C002
     c002_spent = result[(result['CUSTOMERID'] == 'C002') & (result['TRANS_ID'] == 'S002')].iloc[0]
-    assert c002_spent['REDEEMID'] == 'E002', "C002 spent should match C002 earned"
+    assert pd.isna(c002_spent['REDEEMID']), "C002 spent should have NULL REDEEMID"
+    
+    # Assertions for C001 earned
+    c001_earned = result[(result['CUSTOMERID'] == 'C001') & (result['TRANS_ID'] == 'E001')].iloc[0]
+    assert c001_earned['REDEEMID'] == 'S001', "C001 earned should point to C001 spent"
+    
+    # Assertions for C002 earned
+    c002_earned = result[(result['CUSTOMERID'] == 'C002') & (result['TRANS_ID'] == 'E002')].iloc[0]
+    assert c002_earned['REDEEMID'] == 'S002', "C002 earned should point to C002 spent"
     
     # C001 and C002 should not cross-match
-    assert c001_spent['REDEEMID'] != 'E002', "Should not match across customers"
-    assert c002_spent['REDEEMID'] != 'E001', "Should not match across customers"
+    assert c001_earned['REDEEMID'] != 'S002', "Should not match across customers"
+    assert c002_earned['REDEEMID'] != 'S001', "Should not match across customers"
     
     print("✓ Test 5 passed: Multiple customers")
+
 
 
 # Test Case 6: Expired Transactions
@@ -250,16 +266,17 @@ def test_expired_transactions():
     
     result = perform_fifo_matching_logic(earned, spent, expired)
     
-    # Assertions
+    # Expired should have NULL REDEEMID (always NULL for spent/expired)
     expired_row = result[result['TCTYPE'] == 'expired'].iloc[0]
-    assert expired_row['REDEEMID'] == 'E001', "Expired should point to earned E001"
+    assert pd.isna(expired_row['REDEEMID']), "Expired should have NULL REDEEMID"
     
-    earned_rows = result[result['TCTYPE'] == 'earned']
-    redeemed = earned_rows[earned_rows['REDEEMID'].notna()].iloc[0]
-    assert redeemed['REDEEMID'] == 'X001', "Earned should point to expired X001"
-    assert redeemed['AMOUNT'] == 50.0, "Redeemed amount should be $50"
+    # Earned should point to expired X001
+    earned_row = result[result['TCTYPE'] == 'earned'].iloc[0]
+    assert earned_row['REDEEMID'] == 'X001', "Earned should point to expired X001"
+    assert earned_row['AMOUNT'] == 100.0, "Earned amount unchanged (no splitting)"
     
     print("✓ Test 6 passed: Expired transactions")
+
 
 
 # Test Case 7: No Earned Transactions
@@ -339,20 +356,30 @@ def test_each_trans_id_used_once():
     
     result = perform_fifo_matching_logic(earned, spent, expired)
     
-    # Assertions - each earned should be used only once
-    # S001 should match E001
+    # All spent should have NULL REDEEMID (always NULL for spent/expired)
     s001_row = result[result['TRANS_ID'] == 'S001'].iloc[0]
-    assert s001_row['REDEEMID'] == 'E001', "S001 should match E001"
+    assert pd.isna(s001_row['REDEEMID']), "S001 should have NULL REDEEMID"
     
-    # S002 should match E002 (not E001 again)
     s002_row = result[result['TRANS_ID'] == 'S002'].iloc[0]
-    assert s002_row['REDEEMID'] == 'E002', "S002 should match E002 (E001 already used)"
+    assert pd.isna(s002_row['REDEEMID']), "S002 should have NULL REDEEMID"
     
-    # Verify E001 is not used twice
-    spent_with_e001 = result[(result['TCTYPE'].isin(['spent', 'expired'])) & (result['REDEEMID'] == 'E001')]
-    assert len(spent_with_e001) == 1, "E001 should only be used once as REDEEMID"
+    # E001 should point to S001
+    e001_row = result[result['TRANS_ID'] == 'E001'].iloc[0]
+    assert e001_row['REDEEMID'] == 'S001', "E001 should point to S001"
+    
+    # E002 should point to S002 (not S001 again)
+    e002_row = result[result['TRANS_ID'] == 'E002'].iloc[0]
+    assert e002_row['REDEEMID'] == 'S002', "E002 should point to S002 (S001 already used)"
+    
+    # Verify each spent is only used once in earned REDEEMID
+    earned_with_s001 = result[(result['TCTYPE'] == 'earned') & (result['REDEEMID'] == 'S001')]
+    assert len(earned_with_s001) == 1, "S001 should only be used once as REDEEMID"
+    
+    earned_with_s002 = result[(result['TCTYPE'] == 'earned') & (result['REDEEMID'] == 'S002')]
+    assert len(earned_with_s002) == 1, "S002 should only be used once as REDEEMID"
     
     print("✓ Test 9 passed: Each TRANS_ID used only once")
+
 
 
 # Test Case 10: Oldest Unmatched Earned by CREATEDAT
@@ -378,20 +405,28 @@ def test_oldest_unmatched_earned_by_createdat():
     
     result = perform_fifo_matching_logic(earned, spent, expired)
     
-    # Assertions - should match by CREATEDAT order (E002 -> E003 -> E001)
-    # S001 should match E002 (oldest by CREATEDAT: 2024-01-01)
+    # All spent should have NULL REDEEMID (always NULL for spent/expired)
     s001_row = result[result['TRANS_ID'] == 'S001'].iloc[0]
-    assert s001_row['REDEEMID'] == 'E002', "S001 should match E002 (oldest by CREATEDAT)"
+    assert pd.isna(s001_row['REDEEMID']), "S001 should have NULL REDEEMID"
     
-    # S002 should match E003 (second oldest by CREATEDAT: 2024-01-02)
     s002_row = result[result['TRANS_ID'] == 'S002'].iloc[0]
-    assert s002_row['REDEEMID'] == 'E003', "S002 should match E003 (second oldest by CREATEDAT)"
+    assert pd.isna(s002_row['REDEEMID']), "S002 should have NULL REDEEMID"
+    
+    # Assertions - should match by CREATEDAT order (E002 -> E003 -> E001)
+    # E002 should point to S001 (oldest by CREATEDAT: 2024-01-01)
+    e002_row = result[result['TRANS_ID'] == 'E002'].iloc[0]
+    assert e002_row['REDEEMID'] == 'S001', "E002 should point to S001 (oldest by CREATEDAT)"
+    
+    # E003 should point to S002 (second oldest by CREATEDAT: 2024-01-02)
+    e003_row = result[result['TRANS_ID'] == 'E003'].iloc[0]
+    assert e003_row['REDEEMID'] == 'S002', "E003 should point to S002 (second oldest by CREATEDAT)"
     
     # E001 should remain unmatched
     e001_row = result[result['TRANS_ID'] == 'E001'].iloc[0]
     assert pd.isna(e001_row['REDEEMID']), "E001 should remain unmatched"
     
     print("✓ Test 10 passed: Oldest unmatched earned by CREATEDAT")
+
 
 
 # Run all tests
